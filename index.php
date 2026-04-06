@@ -67,6 +67,9 @@
   <p style="margin-top:6px;opacity:.6">Les prix peuvent varier selon les options choisies.</p>
 </footer>
 
+<script>
+  window.WA_NUMBER = '<?= htmlspecialchars(WHATSAPP_NUMBER, ENT_QUOTES) ?>';
+</script>
 <script src="assets/app.js?v=<?= filemtime(__DIR__.'/assets/app.js') ?>"></script>
 </body>
 </html>

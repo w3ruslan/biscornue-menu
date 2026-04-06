@@ -1,9 +1,10 @@
-// La Biscornue — Game UI JS
+// La Biscornue — Game Mission UI
 
-var allProducts = [];
-var allCats     = [];
-var activeCat   = 0;
-var searchQ     = '';
+var allProducts  = [];
+var allCats      = [];
+var activeCat    = 0;
+var searchQ      = '';
+var WA_NUMBER    = window.WA_NUMBER || '';
 
 /* ── Load ─────────────────────────────── */
 async function loadMenu() {
@@ -31,7 +32,7 @@ function filterSearch() {
   renderMenu();
 }
 
-/* ── Render ───────────────────────────── */
+/* ── Render menu ──────────────────────── */
 function renderMenu() {
   const wrap = document.getElementById('menuWrap');
   const filtered = allProducts.filter(p => {
@@ -48,7 +49,6 @@ function renderMenu() {
 
   let html = '';
   if (activeCat === 0 && !searchQ) {
-    // Grouped by category
     const groups = {};
     allCats.forEach(c => { groups[c.id] = []; });
     groups[0] = [];
@@ -64,17 +64,13 @@ function renderMenu() {
 
   wrap.innerHTML = html;
 
-  // Stagger entrance + tilt
   setTimeout(() => {
     const cards = wrap.querySelectorAll('.menu-card');
     cards.forEach((card, i) => {
       card.style.opacity   = '0';
       card.style.transform = 'translateY(24px)';
       card.style.transition = `opacity .35s ${i*35}ms, transform .35s ${i*35}ms`;
-      requestAnimationFrame(() => {
-        card.style.opacity   = '1';
-        card.style.transform = '';
-      });
+      requestAnimationFrame(() => { card.style.opacity = '1'; card.style.transform = ''; });
       initTilt(card);
     });
   }, 10);
@@ -98,7 +94,7 @@ function buildCard(p) {
   const price = fmtPrice(p);
   const cat   = p.cat_name ? `<div class="menu-card-cat" style="color:${p.cat_color||'#d4a853'}">${esc(p.cat_name)}</div>` : '';
   const desc  = p.description ? `<div class="menu-card-desc">${esc(p.description)}</div>` : '';
-  return `<div class="menu-card" onclick="openDetail(${p.id})" data-id="${p.id}">
+  return `<div class="menu-card" onclick="openMission(${p.id})" data-id="${p.id}">
     ${img}
     <div class="menu-card-body">
       ${cat}
@@ -112,11 +108,9 @@ function buildCard(p) {
 /* ── 3D Tilt ──────────────────────────── */
 function initTilt(card) {
   card.addEventListener('mousemove', function(e) {
-    const r   = card.getBoundingClientRect();
-    const x   = e.clientX - r.left;
-    const y   = e.clientY - r.top;
-    const rx  = ((y - r.height/2) / (r.height/2)) * -8;
-    const ry  = ((x - r.width/2)  / (r.width/2))  *  8;
+    const r  = card.getBoundingClientRect();
+    const rx = ((e.clientY - r.top  - r.height/2) / (r.height/2)) * -8;
+    const ry = ((e.clientX - r.left - r.width/2)  / (r.width/2))  *  8;
     card.style.transform  = `perspective(800px) rotateX(${rx}deg) rotateY(${ry}deg) scale(1.04)`;
     card.style.transition = 'transform .05s, box-shadow .2s';
     card.style.zIndex     = '5';
@@ -128,17 +122,36 @@ function initTilt(card) {
   });
 }
 
-/* ── Detail Panel ─────────────────────── */
-function openDetail(id) {
+/* ══════════════════════════════════════════
+   🎮 MISSION PANEL
+══════════════════════════════════════════ */
+
+// Emoji icons per option keyword
+var optIcons = {
+  'pita':'🫓','galette':'🫔','pain':'🍞',
+  'kebab':'🥩','poulet':'🍗','mixte':'🍖','fallafel':'🥙','végétarien':'🥗','falafel':'🧆',
+  'blanche':'🤍','harissa':'🌶️','algérienne':'🧡','bbq':'🫙','ketchup':'🍅','samourai':'⚔️','sauce verte':'🌿',
+  'fromage':'🧀','bacon':'🥓','œuf':'🥚','oeuf':'🥚',
+  'coca':'🥤','coca-cola':'🥤','eau':'💧','jus':'🍊','jus d\'orange':'🍊',
+  'petite':'🔸','grande':'🔶','saignant':'🩸','à point':'👌','bien cuit':'🔥',
+  'classique':'⭐','épicée':'🌶️','extra cheese':'🧀',
+};
+function getOptIcon(label) {
+  const key = label.toLowerCase();
+  for (const k in optIcons) { if (key.includes(k)) return optIcons[k]; }
+  return '●';
+}
+
+function openMission(id) {
   const p = allProducts.find(x => x.id == id);
   if (!p) return;
 
-  // Click bounce
+  // Card click bounce
   const card = document.querySelector(`[data-id="${id}"]`);
   if (card) {
-    card.style.transition = 'transform .1s';
-    card.style.transform  = 'scale(0.94)';
-    setTimeout(() => { card.style.transform = ''; card.style.transition = ''; }, 180);
+    card.style.transition = 'transform .12s';
+    card.style.transform  = 'scale(0.93)';
+    setTimeout(() => { card.style.transform = ''; card.style.transition = ''; }, 160);
   }
 
   const price = fmtPrice(p);
@@ -146,68 +159,129 @@ function openDetail(id) {
   const ytId  = getYtId(desc);
   const cleanDesc = ytId ? desc.replace(/https?:\/\/[^\s]*(youtube\.com|youtu\.be)[^\s]*/g,'').trim() : desc;
 
-  const imgHtml = ytId
-    ? ''
-    : p.image_url
-      ? `<img class="detail-img" src="${p.image_url}" alt="${esc(p.name)}">`
-      : `<div class="detail-img-ph">🍽️</div>`;
+  // Image or placeholder
+  const imgContent = p.image_url && !ytId
+    ? `<img class="mission-img" src="${p.image_url}" alt="${esc(p.name)}">`
+    : `<div class="mission-img-ph">${p.cat_icon||'🍽️'}</div>`;
 
+  // YouTube
   const ytHtml = ytId
     ? `<div class="yt-wrap"><iframe class="yt-frame" src="https://www.youtube.com/embed/${ytId}" frameborder="0" allowfullscreen></iframe></div>`
     : '';
 
-  let optsHtml = '';
+  // Option groups → loadout sections
+  let loadoutHtml = '';
   if (p.options && p.options.length) {
-    p.options.forEach(og => {
-      optsHtml += `<div class="detail-opt-label">${esc(og.name)}</div><div class="opts-grid">`;
-      og.items.forEach(item => {
-        const extra = item.price_extra > 0 ? ` +€${parseFloat(item.price_extra).toFixed(2)}` : '';
-        optsHtml += `<button class="opt-btn" onclick="selOpt(this)">${esc(item.name)}${extra}</button>`;
+    loadoutHtml = '<div class="mission-loadout">';
+    p.options.forEach((og, gi) => {
+      const sectionIcon = getOptIcon(og.name);
+      loadoutHtml += `
+        <div class="loadout-section" data-group="${gi}">
+          <div class="loadout-label">
+            <span class="loadout-icon">${sectionIcon}</span>
+            <span class="loadout-title">${esc(og.name)}</span>
+            <span class="loadout-required">REQUIS</span>
+          </div>
+          <div class="loadout-opts">`;
+      og.items.forEach((item, ii) => {
+        const icon  = getOptIcon(item.name);
+        const extra = item.price_extra > 0 ? `<span class="opt-extra">+€${parseFloat(item.price_extra).toFixed(2)}</span>` : '';
+        const sel   = ii === 0 ? ' sel' : '';
+        loadoutHtml += `<button class="loadout-opt${sel}" data-group="${gi}" data-name="${esc(item.name)}" data-extra="${item.price_extra||0}" onclick="selectOpt(this)">
+          <span class="opt-icon">${icon}</span>
+          <span class="opt-label">${esc(item.name)}</span>
+          ${extra}
+        </button>`;
       });
-      optsHtml += '</div>';
+      loadoutHtml += `</div></div>`;
     });
+    loadoutHtml += '</div>';
   }
 
   const catBadge = p.cat_name
-    ? `<div class="detail-cat" style="color:${p.cat_color||'#d4a853'}">${p.cat_icon||''} ${esc(p.cat_name)}</div>`
-    : '';
+    ? `<div class="mission-badge" style="background:${p.cat_color||'#d4a853'}22;border-color:${p.cat_color||'#d4a853'}55;color:${p.cat_color||'#d4a853'}">
+        🎯 MISSION — ${esc(p.cat_name).toUpperCase()}
+       </div>`
+    : `<div class="mission-badge">🎯 MISSION</div>`;
 
-  const overlay = document.createElement('div');
-  overlay.className = 'detail-overlay';
-  overlay.id = 'detailOverlay';
-  overlay.innerHTML = `
-    <div class="detail-backdrop" onclick="closeDetail()"></div>
-    <div class="detail-panel">
-      <button class="detail-close" onclick="closeDetail()">✕</button>
-      ${imgHtml}
-      <div class="detail-body">
+  const el = document.createElement('div');
+  el.className = 'mission-overlay';
+  el.id = 'missionOverlay';
+  el.innerHTML = `
+    <div class="mission-backdrop" onclick="closeMission()"></div>
+    <div class="mission-panel">
+
+      <div class="mission-img-wrap">
+        ${imgContent}
+        <div class="mission-img-gradient"></div>
+        <button class="mission-close" onclick="closeMission()">✕</button>
+      </div>
+
+      <div class="mission-identity">
         ${catBadge}
-        <div class="detail-name">${esc(p.name)}</div>
-        ${price ? `<div class="detail-price">${price}</div>` : ''}
-        ${ytHtml}
-        ${cleanDesc ? `<div class="detail-desc">${esc(cleanDesc)}</div>` : ''}
-        ${optsHtml}
-        <button class="detail-cta" onclick="closeDetail()">
-          🛒 &nbsp;Commander
+        <div class="mission-name">${esc(p.name)}</div>
+        ${price ? `<div class="mission-price">${price}</div>` : ''}
+        ${cleanDesc ? `<div class="mission-desc">${esc(cleanDesc)}</div>` : ''}
+      </div>
+
+      <div class="mission-divider"></div>
+
+      ${ytHtml}
+      ${loadoutHtml}
+
+      <div class="mission-footer">
+        <div class="mission-summary" id="missionSummary">Sélectionne tes options ci-dessus…</div>
+        <button class="mission-cta" onclick="launchMission('${esc(p.name)}')">
+          <span>🚀</span>
+          <span>LANCER LA MISSION</span>
+          <span class="cta-arrow">→</span>
         </button>
       </div>
     </div>`;
 
-  document.body.appendChild(overlay);
+  document.body.appendChild(el);
   document.body.style.overflow = 'hidden';
+
+  // Auto-build summary from default (first) selections
+  setTimeout(updateSummary, 50);
 }
 
-function closeDetail() {
-  const ov = document.getElementById('detailOverlay');
+function selectOpt(btn) {
+  const group = btn.dataset.group;
+  document.querySelectorAll(`#missionOverlay .loadout-opt[data-group="${group}"]`)
+    .forEach(b => b.classList.remove('sel'));
+  btn.classList.add('sel');
+  updateSummary();
+}
+
+function updateSummary() {
+  const sel = document.querySelectorAll('#missionOverlay .loadout-opt.sel');
+  if (!sel.length) { document.getElementById('missionSummary').textContent = ''; return; }
+  const parts = [];
+  sel.forEach(b => parts.push(b.dataset.name));
+  document.getElementById('missionSummary').textContent = '📋 ' + parts.join(' · ');
+}
+
+function launchMission(productName) {
+  const sel = document.querySelectorAll('#missionOverlay .loadout-opt.sel');
+  const parts = [`🎯 Commande: *${productName}*`];
+  sel.forEach(b => {
+    const extra = parseFloat(b.dataset.extra||0);
+    const price = extra > 0 ? ` (+€${extra.toFixed(2)})` : '';
+    parts.push(`   • ${b.dataset.name}${price}`);
+  });
+  parts.push('\nBonjour, je souhaite passer cette commande 😊');
+  const msg  = encodeURIComponent(parts.join('\n'));
+  const num  = WA_NUMBER.replace(/\D/g,'');
+  window.open(`https://wa.me/${num}?text=${msg}`, '_blank');
+}
+
+function closeMission() {
+  const ov = document.getElementById('missionOverlay');
   if (!ov) return;
   ov.style.opacity    = '0';
   ov.style.transition = 'opacity .2s';
   setTimeout(() => { ov.remove(); document.body.style.overflow = ''; }, 220);
-}
-
-function selOpt(btn) {
-  btn.closest('.opts-grid').querySelectorAll('.opt-btn').forEach(b => b.classList.remove('sel'));
-  btn.classList.add('sel');
 }
 
 /* ── Helpers ──────────────────────────── */

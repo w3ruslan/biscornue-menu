@@ -1,7 +1,8 @@
 <?php
 define('SHOP_NAME',    'La Biscornue');
 define('SHOP_TAGLINE', 'Restaurant grec · Oudon');
-define('SHOP_PHONE',   '+33 X XX XX XX XX');
+define('SHOP_PHONE',      '+33 X XX XX XX XX');
+define('WHATSAPP_NUMBER', '33XXXXXXXXX'); // Remplacer par vrai numéro
 define('SHOP_ADDRESS', 'Oudon, France');
 define('ADMIN_PASS',   'biscornue2024');
 
