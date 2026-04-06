@@ -6,9 +6,9 @@ define('SHOP_ADDRESS', 'Oudon, France');
 define('ADMIN_PASS',   'biscornue2024');
 
 define('DB_HOST', 'localhost');
-define('DB_NAME', 'biscornue');
-define('DB_USER', 'root');
-define('DB_PASS', '');
+define('DB_NAME', 'u870017612_biscornue');
+define('DB_USER', 'u870017612_biscornue');
+define('DB_PASS', '1234566Ruslan-');
 
 function getDB(): PDO {
     static $pdo = null;
